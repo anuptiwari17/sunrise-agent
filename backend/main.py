@@ -96,9 +96,108 @@ def run_agent(req: AgentRunRequest) -> Dict[str, Any]:
 
 # --- Frontend Helper Endpoints ---
 
+# Seed initial handoffs from known escalated conversations so the UI is immediately populated
+def _seed_handoffs():
+    script_dirs = [
+        pathlib.Path(__file__).resolve().parent.parent / "conversations",
+        pathlib.Path(__file__).resolve().parent.parent / "adversarial",
+    ]
+    count = 1
+    for sdir in script_dirs:
+        if not sdir.exists():
+            continue
+        for p in sorted(sdir.glob("*.json")):
+            try:
+                import json
+                with open(p, "r", encoding="utf-8") as f:
+                    sdata = json.load(f)
+                if sdata.get("expected", {}).get("terminal_state") == "escalated":
+                    caller_said = sdata["turns"][-1] if sdata.get("turns") else ""
+                    handoff_records.append({
+                        "id": f"hf_{count:03d}",
+                        "conversation_id": sdata["id"],
+                        "caller_said": caller_said,
+                        "all_turns": sdata.get("turns", []),
+                        "reason": sdata["expected"].get("escalation_reason"),
+                        "patient_id": None,
+                        "tool_calls": [
+                            {"name": "lookup_patient", "arguments": {}},
+                            {"name": "escalate_to_human", "arguments": {"reason": sdata["expected"].get("escalation_reason")}}
+                        ],
+                        "status": "open",
+                    })
+                    count += 1
+            except Exception:
+                pass
+
+_seed_handoffs()
+
+
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "clinic": "Sunrise Clinic, Dehradun"}
+
+
+@app.get("/api/conversations")
+def list_conversations():
+    """Lists all available conversation scripts from conversations/ and adversarial/."""
+    import json
+    scripts = []
+    dirs = [
+        ("Official Baseline", pathlib.Path(__file__).resolve().parent.parent / "conversations"),
+        ("Adversarial Suite", pathlib.Path(__file__).resolve().parent.parent / "adversarial"),
+    ]
+    for category, sdir in dirs:
+        if not sdir.exists():
+            continue
+        for p in sorted(sdir.glob("*.json")):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                scripts.append({
+                    "id": data["id"],
+                    "category": category,
+                    "description": data.get("description", ""),
+                    "today": data.get("today", "2026-10-01"),
+                    "turns": data.get("turns", []),
+                    "expected": data.get("expected", {}),
+                })
+            except Exception:
+                pass
+    return {"conversations": scripts}
+
+
+@app.get("/api/conversations/{conv_id}/run")
+def run_specific_conversation(conv_id: str):
+    """Runs a specific conversation and returns full trace with inline tool mapping."""
+    import json
+    dirs = [
+        pathlib.Path(__file__).resolve().parent.parent / "conversations",
+        pathlib.Path(__file__).resolve().parent.parent / "adversarial",
+    ]
+    script_data = None
+    for sdir in dirs:
+        p = sdir / f"{conv_id}.json"
+        if p.exists():
+            with open(p, "r", encoding="utf-8") as f:
+                script_data = json.load(f)
+            break
+
+    if not script_data:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    request_store = BASE_STORE.clone()
+    runner = AgentRunner(request_store)
+    result = runner.run(
+        conversation_id=script_data["id"],
+        today=script_data.get("today", "2026-10-01"),
+        turns=script_data["turns"],
+    )
+
+    return {
+        "script": script_data,
+        "result": result,
+    }
 
 
 @app.get("/api/handoffs")
