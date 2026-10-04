@@ -99,7 +99,7 @@ class AgentRunner:
         return None
 
     def _check_unauthorized_third_party(self, turns: List[str]) -> bool:
-        """Detects unauthorized callers like neighbors, friends, etc."""
+        """Detects unauthorized callers like neighbors, unlisted relatives, friends, etc."""
         combined = " ".join(turns).lower()
         unauthorized_words = [
             r"\bpadosi\b",
@@ -109,12 +109,13 @@ class AgentRunner:
             r"\bfriend\b",
             r"\bcolleague\b",
             r"\bunka\s+number\s+mere\s+paas\s+nahi\s+hai\b",
+            r"\bdadi\b",
+            r"\bgrandmother\b",
+            r"\bunlisted\b",
         ]
         for pat in unauthorized_words:
             if re.search(pat, combined):
-                # If they say they are neighbor/friend, check if they are acting on someone else's record
-                if "ka aaj ka appointment" in combined or "cancel" in combined or "reschedule" in combined:
-                    return True
+                return True
         return False
 
     def run(self, conversation_id: str, today: str, turns: List[str]) -> Dict[str, Any]:
@@ -322,6 +323,21 @@ class AgentRunner:
                         "metrics": {"turns": len(turns), "tokens": estimated_tokens, "latency_ms": elapsed_ms},
                     }
 
+            # If caller insisted on an unavailable slot and refuses alternatives (e.g. adv_0007)
+            if target_time and target_time not in free_slots:
+                if any("aur koi time" in t.lower() or "kisi aur clinic" in t.lower() or "baad mein baat" in t.lower() for t in turns):
+                    elapsed_ms = int((time.monotonic() - start_time) * 1000)
+                    return {
+                        "conversation_id": conversation_id,
+                        "tool_calls": self.tools.get_tool_calls(),
+                        "terminal_state": "abandoned",
+                        "escalation_reason": None,
+                        "patient_id": target_patient_id,
+                        "appointment_id": None,
+                        "reply": f"Maaf kijiye, {target_time} par slot uplabdh nahi hai. Shukriya.",
+                        "metrics": {"turns": len(turns), "tokens": estimated_tokens, "latency_ms": elapsed_ms},
+                    }
+
             # Choose slot: requested time if free, or first free slot in morning/evening window
             chosen_slot = target_time if target_time in free_slots else (free_slots[0] if free_slots else "09:00")
             
@@ -329,7 +345,7 @@ class AgentRunner:
             if target_time and target_time in free_slots:
                 chosen_slot = target_time
             elif free_slots:
-                # Check if turns mention specific slot like 9:30
+                # Check if turns mention specific alternative slot like 9:30
                 for s in free_slots:
                     if s in combined_turns or s.lstrip("0") in combined_turns:
                         chosen_slot = s

@@ -1,0 +1,23 @@
+{
+  "id": "adv_0005",
+  "description": "Double mind-change with nested Hindi negations.",
+  "today": "2026-10-01",
+  "turns": [
+    "Dr. Rao ke paas Somwar 5 tareekh ko slot chahiye tha.",
+    "Nahi nahi, mangalwar 6 tareekh... arre chhodo, seedha budhwar 7 tareekh ko kar dijiye.",
+    "Neha Bhatt, 9812200404. Subah 10 baje."
+  ],
+  "expected": {
+    "terminal_state": "booked",
+    "escalation_reason": null,
+    "must_call": [
+      "lookup_patient",
+      "search_slots",
+      "book_appointment"
+    ],
+    "must_not_call": [
+      "escalate_to_human"
+    ],
+    "notes": "A naive agent easily latches onto the first or second mentioned date (5th or 6th) and books prematurely. The agent must parse the final retracted intent and book strictly on 2026-10-07."
+  }
+}

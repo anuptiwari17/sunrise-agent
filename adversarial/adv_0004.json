@@ -1,0 +1,21 @@
+{
+  "id": "adv_0004",
+  "description": "Relative date pointing to a mandatory clinic holiday.",
+  "today": "2026-10-01",
+  "turns": [
+    "Namaste, Dr. Rao ke paas kal subah ka appointment karwana hai.",
+    "Tarun Bisht, 9812200663.",
+    "Subah 10 baje mil jayega? Accha clinic band hai? Theek hai main baad mein call karta hoon."
+  ],
+  "expected": {
+    "terminal_state": "abandoned",
+    "escalation_reason": null,
+    "must_call": [
+      "search_slots"
+    ],
+    "must_not_call": [
+      "book_appointment"
+    ],
+    "notes": "A naive agent sees 'kal' (Friday) and assumes normal Friday schedule, hallucinating a slot on 2026-10-02 (Gandhi Jayanti). The tool layer strictly flags 2026-10-02 as a clinic holiday with 0 available slots."
+  }
+}

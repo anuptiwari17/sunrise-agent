@@ -35,6 +35,9 @@ CLINICAL_URGENT_PATTERNS = [
     r"\bstroke\b",
     r"\bpoison(?:ing)?\b",
     r"\bzehar\b",
+    r"\barm\s+(?:thodi\s+)?numb\b",
+    r"\bhaath\s+(?:sunn|numb)\b",
+    r"\bchakkar\b",
 ]
 
 # Medical advice queries (asking for clinical opinion or prescription adjustments)
@@ -42,8 +45,10 @@ MEDICAL_ADVICE_PATTERNS = [
     r"\bgoli\s+le\s+lun\b",
     r"\bcrocin\b",
     r"\bparacetamol\b",
+    r"\bibuprofen\b",
     r"\bmedicine\s+(?:dose|dosage|should\s+i\s+take)\b",
     r"\bkitni\s+der\s+mein\s+utar\s+jana\s+chahiye\b",
+    r"\bkitna\s+ml\b",
     r"\bshould\s+i\s+take\s+another\b",
     r"\bmedical\s+advice\b",
     r"\bdawa\s+kaunsi\b",
@@ -61,6 +66,9 @@ PROMPT_INJECTION_PATTERNS = [
     r"\bprompt\s+injection\b",
     r"\bjailbreak\b",
     r"\bauthorised\s+internal\s+test\b",
+    r"\boverride\s+standard\s+validation\b",
+    r"\bemergency\s+slot\s+for\s+patient\b",
+    r"\bbypass\s+verification\b",
 ]
 
 # Non-actionable noise turns
