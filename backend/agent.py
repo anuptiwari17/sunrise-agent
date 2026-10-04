@@ -11,6 +11,7 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.dates import resolve_clock_time, resolve_relative_date
+from backend.llm_client import LLMClient
 from backend.safety import (
     check_abandoned_call,
     check_clinical_urgent,
@@ -22,11 +23,12 @@ from backend.tools import ClinicTools
 
 
 class AgentRunner:
-    """Runs a multi-turn conversation script against an isolated ClinicStore."""
+    """Runs a multi-turn conversation script with LLM function calling and safety guardrails."""
 
     def __init__(self, store: ClinicStore):
         self.store = store
         self.tools = ClinicTools(store)
+        self.llm = LLMClient()
 
     def _extract_phone(self, turns: List[str]) -> Optional[str]:
         for turn in turns:
@@ -206,7 +208,34 @@ class AgentRunner:
                 "metrics": {"turns": len(turns), "tokens": estimated_tokens, "latency_ms": elapsed_ms},
             }
 
-        # --- STEP 2: ENTITY EXTRACTION ---
+        # --- STEP 2: LLM INTENT & TOOL CALLING INVOCATION ---
+        # If an LLM provider (Gemini or OpenAI) is active, invoke it
+        active_provider = self.llm.get_active_provider()
+        llm_tool_calls = None
+        if active_provider == "openai":
+            llm_tool_calls = self.llm.call_openai(today, turns)
+        elif active_provider == "gemini":
+            llm_tool_calls = self.llm.call_gemini(today, turns)
+
+        # If LLM returned valid tool calls, we can execute them
+        if llm_tool_calls:
+            for tc in llm_tool_calls:
+                fn_name = tc.get("name")
+                fn_args = tc.get("arguments", {})
+                if fn_name == "lookup_patient":
+                    self.tools.lookup_patient(**fn_args)
+                elif fn_name == "search_slots":
+                    self.tools.search_slots(**fn_args)
+                elif fn_name == "book_appointment":
+                    self.tools.book_appointment(**fn_args)
+                elif fn_name == "reschedule_appointment":
+                    self.tools.reschedule_appointment(**fn_args)
+                elif fn_name == "cancel_appointment":
+                    self.tools.cancel_appointment(**fn_args)
+                elif fn_name == "escalate_to_human":
+                    self.tools.escalate_to_human(**fn_args)
+
+        # --- STEP 3: DETERMINISTIC ENTITY EXTRACTION & ACTION RESOLUTION ---
         phone = self._extract_phone(turns)
         extracted_name = self._extract_patient_name(turns)
         doctor_id = self._extract_doctor(turns) or "dr_rao"
