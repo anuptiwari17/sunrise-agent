@@ -1,77 +1,62 @@
 import React from 'react';
-import { ShieldAlert, MessageSquareText, Activity, Calendar, Stethoscope, CheckCircle2 } from 'lucide-react';
 
 interface SidebarProps {
   currentTab: 'queue' | 'detail';
   setCurrentTab: (tab: 'queue' | 'detail') => void;
-  openHandoffsCount: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
-  currentTab,
-  setCurrentTab,
-  openHandoffsCount,
-}) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) => {
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <div className="brand-wrapper">
-          <div className="brand-icon">
-            <Activity size={22} />
-          </div>
-          <div className="brand-text">
-            <h1>Sunrise Clinic</h1>
-            <span>Front Desk Agent</span>
-          </div>
-        </div>
-      </div>
+    <aside className="sidebar-rail" aria-label="Persistent Navigation">
+      {/* 7 Vertical Navigation Dots as specified in Swasthiq UI Mockup */}
+      <button
+        className="rail-dot"
+        title="Clinic Overview"
+        aria-label="Clinic Overview"
+        onClick={() => setCurrentTab('queue')}
+      />
 
-      <nav className="nav-section">
-        <span className="nav-label">Navigation</span>
+      <button
+        className={`rail-dot ${currentTab === 'queue' ? 'active' : ''}`}
+        title="1. Handoff Queue"
+        aria-label="Handoff Queue"
+        onClick={() => setCurrentTab('queue')}
+      />
 
-        <button
-          className={`nav-item ${currentTab === 'queue' ? 'active' : ''}`}
-          onClick={() => setCurrentTab('queue')}
-        >
-          <div className="nav-item-inner">
-            <ShieldAlert size={18} />
-            <span>Handoff Queue</span>
-          </div>
-          {openHandoffsCount > 0 && (
-            <span className="badge-count">{openHandoffsCount}</span>
-          )}
-        </button>
+      <button
+        className={`rail-dot ${currentTab === 'detail' ? 'active' : ''}`}
+        title="2. Conversation Detail"
+        aria-label="Conversation Detail"
+        onClick={() => setCurrentTab('detail')}
+      />
 
-        <button
-          className={`nav-item ${currentTab === 'detail' ? 'active' : ''}`}
-          onClick={() => setCurrentTab('detail')}
-        >
-          <div className="nav-item-inner">
-            <MessageSquareText size={18} />
-            <span>Conversation Detail</span>
-          </div>
-        </button>
-      </nav>
+      <button
+        className="rail-dot"
+        title="Doctor Windows & Schedules"
+        aria-label="Doctor Windows & Schedules"
+        onClick={() => setCurrentTab('detail')}
+      />
 
-      <div className="sidebar-footer">
-        <div className="status-card">
-          <div className="status-row">
-            <span style={{ color: 'var(--text-subtle)' }}>Engine Status</span>
-            <div className="status-indicator">
-              <span className="status-dot"></span>
-              <span>Online</span>
-            </div>
-          </div>
-          <div className="status-row">
-            <span style={{ color: 'var(--text-subtle)' }}>Ref Date</span>
-            <span style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>2026-10-01</span>
-          </div>
-          <div className="status-row">
-            <span style={{ color: 'var(--text-subtle)' }}>Doctors Active</span>
-            <span style={{ color: '#e2e8f0' }}>2 Doctors</span>
-          </div>
-        </div>
-      </div>
+      <button
+        className="rail-dot"
+        title="Patient Directory"
+        aria-label="Patient Directory"
+        onClick={() => setCurrentTab('queue')}
+      />
+
+      <button
+        className="rail-dot"
+        title="Audit Logs & Determinism"
+        aria-label="Audit Logs & Determinism"
+        onClick={() => setCurrentTab('detail')}
+      />
+
+      <button
+        className="rail-dot"
+        title="Clinic Configuration"
+        aria-label="Clinic Configuration"
+        onClick={() => setCurrentTab('queue')}
+      />
     </aside>
   );
 };

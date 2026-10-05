@@ -7,22 +7,24 @@ export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<'queue' | 'detail'>('queue');
   const [handoffs, setHandoffs] = useState<HandoffItem[]>([]);
   const [conversations, setConversations] = useState<any[]>([]);
-  const [selectedConvId, setSelectedConvId] = useState<string>('cv_0001');
+  const [selectedConvId, setSelectedConvId] = useState<string>('cv_4471');
 
-  // Load handoffs
+  // Load handoffs from backend
   const loadHandoffs = async () => {
     try {
       const resp = await fetch('/api/handoffs');
       if (resp.ok) {
         const data = await resp.json();
-        setHandoffs(data.handoffs || []);
+        if (data.handoffs && data.handoffs.length > 0) {
+          setHandoffs(data.handoffs);
+        }
       }
     } catch (err) {
       console.error('Failed to load handoffs:', err);
     }
   };
 
-  // Load conversations
+  // Load conversation test scripts from backend
   const loadConversations = async () => {
     try {
       const resp = await fetch('/api/conversations');
@@ -42,15 +44,14 @@ export const App: React.FC = () => {
 
   const handleResolve = async (id: string) => {
     try {
-      const resp = await fetch(`/api/handoffs/${id}/resolve`, { method: 'POST' });
-      if (resp.ok) {
-        setHandoffs((prev) =>
-          prev.map((h) => (h.id === id ? { ...h, status: 'resolved' } : h))
-        );
-      }
+      await fetch(`/api/handoffs/${id}/resolve`, { method: 'POST' });
     } catch (err) {
       console.error('Failed to resolve handoff:', err);
     }
+    // Optimistically update UI
+    setHandoffs((prev) =>
+      prev.map((h) => (h.id === id ? { ...h, status: 'resolved' } : h))
+    );
   };
 
   const handleSelectConversation = (convId: string) => {
@@ -58,50 +59,19 @@ export const App: React.FC = () => {
     setCurrentTab('detail');
   };
 
-  const openHandoffsCount = handoffs.filter((h) => h.status === 'open').length;
-
   return (
-    <div className="app-container">
-      {/* Shared Sidebar Persistent Across Both Screens */}
-      <Sidebar
-        currentTab={currentTab}
-        setCurrentTab={setCurrentTab}
-        openHandoffsCount={openHandoffsCount}
-      />
+    <div>
+      {/* Super Header Number matching Assignment Mockups (e.g. "1. Handoff Queue" / "2. Conversation Detail") */}
+      <div className="page-super-header">
+        {currentTab === 'queue' ? '1. Handoff Queue' : '2. Conversation Detail'}
+      </div>
 
-      {/* Main Workspace Area */}
-      <main className="main-content">
-        <header className="top-bar">
-          <div className="top-bar-title">
-            <h2>
-              {currentTab === 'queue'
-                ? 'Clinical Handoff & Escalation Queue'
-                : 'Conversation Trace & Grounding Inspector'}
-            </h2>
-            <div className="top-bar-subtitle">
-              {currentTab === 'queue'
-                ? 'Deterministic triage of conversations exceeding front-desk remit'
-                : 'Visual proof of grounding with inline tool execution chips'}
-            </div>
-          </div>
+      {/* Main Persistent Card Wrapper */}
+      <div className="app-card-wrapper">
+        {/* Shared Persistent Sidebar Rail with 7 circular dots */}
+        <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                fontFamily: 'var(--font-mono)',
-                color: '#34d399',
-                background: 'rgba(16, 185, 129, 0.1)',
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(16, 185, 129, 0.25)',
-              }}
-            >
-              Zero Invented Facts Enforced
-            </span>
-          </div>
-        </header>
-
+        {/* View Switcher */}
         {currentTab === 'queue' ? (
           <HandoffQueue
             handoffs={handoffs}
@@ -115,7 +85,7 @@ export const App: React.FC = () => {
             onSelectConvId={setSelectedConvId}
           />
         )}
-      </main>
+      </div>
     </div>
   );
 };
