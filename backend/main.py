@@ -133,7 +133,8 @@ def _seed_handoffs():
 _seed_handoffs()
 
 
-@app.get("/api/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "ok", "clinic": "Sunrise Clinic, Dehradun"}
 
