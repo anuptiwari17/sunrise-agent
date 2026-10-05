@@ -7,6 +7,7 @@ import { DoctorSchedules } from './components/DoctorSchedules';
 import { PatientDirectory } from './components/PatientDirectory';
 import { TestAudit } from './components/TestAudit';
 import { SettingsView } from './components/SettingsView';
+import { API_BASE } from './config';
 
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<TabKey>('queue');
@@ -18,7 +19,7 @@ export const App: React.FC = () => {
   // Load handoffs from backend
   const loadHandoffs = async () => {
     try {
-      const resp = await fetch('/api/handoffs');
+      const resp = await fetch(`${API_BASE}/api/handoffs`);
       if (resp.ok) {
         const data = await resp.json();
         if (data.handoffs && data.handoffs.length > 0) {
@@ -33,7 +34,7 @@ export const App: React.FC = () => {
   // Load conversation test scripts from backend
   const loadConversations = async () => {
     try {
-      const resp = await fetch('/api/conversations');
+      const resp = await fetch(`${API_BASE}/api/conversations`);
       if (resp.ok) {
         const data = await resp.json();
         setConversations(data.conversations || []);
@@ -46,7 +47,7 @@ export const App: React.FC = () => {
   // Load clinic data (doctors, patients, holidays) from backend
   const loadClinicData = async () => {
     try {
-      const resp = await fetch('/api/clinic-info');
+      const resp = await fetch(`${API_BASE}/api/clinic-info`);
       if (resp.ok) {
         const data = await resp.json();
         setClinicData(data);
@@ -64,7 +65,7 @@ export const App: React.FC = () => {
 
   const handleResolve = async (id: string) => {
     try {
-      await fetch(`/api/handoffs/${id}/resolve`, { method: 'POST' });
+      await fetch(`${API_BASE}/api/handoffs/${id}/resolve`, { method: 'POST' });
     } catch (err) {
       console.error('Failed to resolve handoff:', err);
     }

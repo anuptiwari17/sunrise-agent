@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../config';
 
 interface ToolCall {
   name: string;
@@ -96,7 +97,7 @@ export const ConversationDetail: React.FC<ConversationDetailProps> = ({
 
     setLoading(true);
     try {
-      const resp = await fetch(`/api/conversations/${convId}/run`);
+      const resp = await fetch(`${API_BASE}/api/conversations/${convId}/run`);
       if (resp.ok) {
         const data = await resp.json();
         setResult(data.result);
