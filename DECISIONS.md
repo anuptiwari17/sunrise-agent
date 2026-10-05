@@ -17,12 +17,25 @@ This document records all architectural choices, ambiguities identified in `clin
 * **Risk:** A naive slot generation loop iterating over each window independently would produce duplicate slots for `11:45-12:00`.
 * **Decision:** We treat windows as time intervals and generate slots as the **union** of intervals. All generated 15-minute slots for a doctor on a given day are deduplicated and sorted chronologically before booking checks are applied.
 
-### 1.2 "Today" Reference vs System Clock
+### 1.2 Doctor Name Mismatch: "Dr. Vikram Sethi" (`clinic.json`) vs "Dr. Rajiv Sethi" (`cv_0006`)
+* **Observation:** In `clinic.json`, the pediatrician is officially listed as `"Dr. Vikram Sethi"` (`id: "dr_sethi"`). However, in conversation script `cv_0006`, the caller says:
+  > *"Dr. Rajiv Sethi se milna tha bete Aarav ke liye."*
+* **Risk:** Exact string matching on the full name `"Rajiv Sethi"` would fail to locate the doctor and trigger a false-negative rejection or invalid tool call.
+* **Decision:** Entity extraction matches against unique medical staff surnames (`sethi` $\rightarrow$ `dr_sethi`, `rao` $\rightarrow$ `dr_rao`). This ensures robust doctor resolution regardless of whether the caller misremembers the doctor's first name.
+
+### 1.3 Typo in Assignment UI Mockup Specification (`"d_rao"` vs `"dr_rao"`)
+* **Observation:** In the UI Requirements section of the brief (Screen 2: Conversation Detail mockup), the sample inline tool chip reads:
+  > `search_slots(doctor_id="d_rao", date="2026-09-28", window="morning")`
+  Here, the doctor ID is written as `"d_rao"` instead of `"dr_rao"`.
+* **Risk:** In `clinic.json`, the canonical ID is `"dr_rao"`. Attempting to query `"d_rao"` violates the foreign key relationship in the database.
+* **Decision:** We identified `"d_rao"` as a minor visual typo in the designer's graphical mockup. The API, backend tool layer, and frontend dynamically enforce the canonical ID `"dr_rao"`.
+
+### 1.4 "Today" Reference vs System Clock
 * **Observation:** `clinic.json` specifies `"reference_date": "2026-10-01"` (Thursday), and all conversation scripts pass `"today": "2026-10-01"`.
 * **Risk:** Calling Python's `datetime.now()` or `date.today()` would cause tests to fail on any other calendar day and would break repeatability.
 * **Decision:** All relative date calculations ("kal", "parso", "somwar", "tomorrow") are anchored strictly to the `today` string passed in the request body. If `today` is missing, it falls back to `clinic.reference_date`. The system clock is never accessed anywhere in the codebase.
 
-### 1.3 State Isolation Between Test Conversations
+### 1.5 State Isolation Between Test Conversations
 * **Observation:** In `conversations/`, scripts like `cv_0001` and `cv_0012` book slots in isolation, while `cv_0015` tests behavior when a slot is already taken. If state persists across requests, script execution order would alter test outcomes.
 * **Decision:** Every call to `POST /agent/run` starts from an isolated, pristine clone of `clinic.json`. We use an in-memory transactional store (`ClinicStore`) instantiated fresh per conversation, guaranteeing zero state leakage.
 
