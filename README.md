@@ -1,4 +1,4 @@
-# Sunrise Clinic — Front Desk Agent
+# Sunrise Clinic - Front Desk Agent
 
 A safe, deterministic conversational agent with six tools over a synthetic clinic's schedule, paired with a React operator console for escalation triage and conversation auditing.
 
@@ -145,8 +145,8 @@ Conforms strictly to `schema.md`.
 
 The React interface matches the specification with a persistent 7-dot sidebar:
 
-* **Screen 1 — Handoff Queue:** Live counters across the top (`37 today`, `31 completed`, `6 escalated`, `1 urgent`), triage table with color-coded pills, and `Resolve` action buttons.
-* **Screen 2 — Conversation Detail:** Multi-turn transcript with inline tool execution chips showing visual proof of grounding, machine-readable outcome inspector, and determinism stability badge (`STABLE`).
+* **Screen 1 - Handoff Queue:** Live counters across the top (`37 today`, `31 completed`, `6 escalated`, `1 urgent`), triage table with color-coded pills, and `Resolve` action buttons.
+* **Screen 2 - Conversation Detail:** Multi-turn transcript with inline tool execution chips showing visual proof of grounding, machine-readable outcome inspector, and determinism stability badge (`STABLE`).
 * **Active Clinic Modules:** Dot navigation for Doctor Schedules, Patient Directory (with interactive ambiguity search), Test Audit, and LLM Settings.
 
 ---
