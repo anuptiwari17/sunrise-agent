@@ -14,30 +14,65 @@ from typing import List, Optional, Tuple
 
 # Emergency / Urgent clinical symptoms in Hindi, Hinglish, and English
 CLINICAL_URGENT_PATTERNS = [
+    # Cardiovascular & Thoracic
     r"\bseene\s+mein\s+dard\b",
     r"\bchhati\s+mein\s+dard\b",
     r"\bchest\s+pain\b",
     r"\bheart\s+attack\b",
-    r"\bsaans\s+(?:thodi\s+)?phool\b",
+    r"\bangina\b",
+    r"\bcrushing\s+pressure\b",
+    r"\bseene\s+mein\s+dabav\b",
+    # Respiratory Distress
+    r"\bsaans\s+(?:thodi\s+|bohot\s+)?phool\b",
     r"\bsaans\s+lene\s+mein\s+(?:takleef|dikkat|pareshani)\b",
+    r"\bsaans\s+nahi\s+aa\s+rahi\b",
     r"\bshortness\s+of\s+breath\b",
     r"\bbreathless(?:ness)?\b",
     r"\bchoking\b",
+    r"\bgasping\b",
+    r"\bdam\s+ghut\b",
+    r"\bwheezing\b",
+    r"\bcyanosis\b",
+    r"\bneela\s+pad\s+gaya\b",
+    r"\bblue\s+lips\b",
+    # Neurological & Stroke
     r"\bbehosh\b",
     r"\bunconscious\b",
     r"\bfainting\b",
-    r"\bkhoon\s+bah\s+raha\b",
-    r"\bsevere\s+bleeding\b",
-    r"\bprofuse\s+bleeding\b",
-    r"\bseizure\b",
-    r"\bdaura\s+pad\b",
-    r"\bparalysis\b",
-    r"\bstroke\b",
-    r"\bpoison(?:ing)?\b",
-    r"\bzehar\b",
+    r"\bpassed\s+out\b",
+    r"\bchakkar\b",
+    r"\bvertigo\b",
+    r"\bblackout\b",
     r"\barm\s+(?:thodi\s+)?numb\b",
     r"\bhaath\s+(?:sunn|numb)\b",
-    r"\bchakkar\b",
+    r"\bchehra\s+tedha\b",
+    r"\bfacial\s+droop\b",
+    r"\bslurred\s+speech\b",
+    r"\bparalysis\b",
+    r"\blakwa\b",
+    r"\bstroke\b",
+    r"\bseizure\b",
+    r"\bdaura\s+pad\b",
+    r"\bconvulsion\b",
+    r"\bmirgi\b",
+    # Severe Bleeding & Trauma
+    r"\bkhoon\s+(?:bah|nikal)\s+raha\b",
+    r"\bsevere\s+bleeding\b",
+    r"\bprofuse\s+bleeding\b",
+    r"\bkhoon\s+ki\s+ulti\b",
+    r"\bvomiting\s+blood\b",
+    r"\bhead\s+injury\b",
+    r"\bsir\s+phat\s+gaya\b",
+    r"\baccident\b",
+    r"\bfracture\b",
+    # Poisoning & Toxic Ingestion
+    r"\bpoison(?:ing)?\b",
+    r"\bzehar\b",
+    r"\boverdose\b",
+    # Acute Abdomen / Severe Pediatric
+    r"\bpet\s+mein\s+asahaniya\s+dard\b",
+    r"\bunbearable\s+stomach\s+pain\b",
+    r"\bbaccha\s+saans\s+nahi\s+le\s+raha\b",
 ]
 
 # Medical advice queries (asking for clinical opinion or prescription adjustments)
@@ -85,13 +120,49 @@ NOISE_WORDS = {
 }
 
 
+def is_symptom_negated(text: str, start: int, end: int) -> bool:
+    """Checks if the matched symptom in text[start:end] is negated in its clause."""
+    pre_text = text[max(0, start - 50):start].lower()
+    clause_pre = re.split(r"[.,;!?\n]", pre_text)[-1]
+
+    post_text = text[end:min(len(text), end + 50)].lower()
+    clause_post = re.split(r"[.,;!?\n]", post_text)[0]
+
+    # Check English pre-negation: 'no chest pain', 'without chest pain', 'denies chest pain'
+    if re.search(r"\b(?:no|not|without|denies|denied|zero)\b", clause_pre):
+        return True
+
+    # Check Hindi pre-negation trigger like 'koi', 'kisi bhi prakar ki'
+    has_hindi_prefix = bool(
+        re.search(
+            r"\b(?:koi|kisi\s+bhi\s+(?:prakar|tarah)\s+(?:ka|ki|ke)|kuchh\s+bhi)\b",
+            clause_pre,
+        )
+    )
+
+    # Check post-negation: 'nahi hai', 'nahi ho raha', 'absent'
+    has_post_neg = bool(re.search(r"\b(?:nahi|nahin)\b", clause_post))
+
+    if has_hindi_prefix and has_post_neg:
+        return True
+    if has_post_neg:
+        return True
+
+    return False
+
+
 def check_clinical_urgent(turns: List[str]) -> bool:
-    """Checks if any turn mentions an acute emergency symptom."""
+    """Checks if any turn mentions an active acute emergency symptom (ignoring negated symptoms)."""
     for turn in turns:
         clean = turn.lower()
         for pat in CLINICAL_URGENT_PATTERNS:
-            if re.search(pat, clean):
-                return True
+            for match in re.finditer(pat, clean):
+                start, end = match.span()
+                # 'saans nahi aa rahi' already includes 'nahi' as the actual respiratory emergency
+                if "saans" in pat and "nahi" in pat:
+                    return True
+                if not is_symptom_negated(clean, start, end):
+                    return True
     return False
 
 

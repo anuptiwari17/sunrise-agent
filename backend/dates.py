@@ -128,18 +128,28 @@ def resolve_relative_date(text: str, today_str: str) -> Optional[str]:
     if target_weekday_found:
         return target_weekday_found
 
-    # 5. Check for 'parso' (day after tomorrow = +2 days)
-    if re.search(r"\bparso\b|\bparson\b|\bday after tomorrow\b", clean_text):
+    # 5. Check for 3 days later: 'narso', 'tarso', 'teen din baad', '3 days later'
+    if re.search(r"\b(?:narso|tarso|teen\s+din\s+baad|3\s+days\s+later)\b", clean_text):
+        target = ref_date + datetime.timedelta(days=3)
+        return target.strftime("%Y-%m-%d")
+
+    # 6. Check for 2 days later: 'parso', 'parson', 'day after tomorrow', 'do din baad', '2 days later'
+    if re.search(r"\b(?:parso|parson|day\s+after\s+tomorrow|do\s+din\s+baad|2\s+days\s+later)\b", clean_text):
         target = ref_date + datetime.timedelta(days=2)
         return target.strftime("%Y-%m-%d")
 
-    # 6. Check for 'kal' (tomorrow = +1 day)
-    if re.search(r"\bkal\b|\btomorrow\b", clean_text):
+    # 7. Check for 1 day later: 'kal', 'tomorrow', 'agle din', 'agli subah', 'next day', 'ek din baad'
+    if re.search(r"\b(?:kal|tomorrow|agle\s+din|agli\s+subah|next\s+day|ek\s+din\s+baad)\b", clean_text):
         target = ref_date + datetime.timedelta(days=1)
         return target.strftime("%Y-%m-%d")
 
-    # 7. Check for 'aaj' (today)
-    if re.search(r"\baaj\b|\btoday\b", clean_text):
+    # 8. Check for 1 week later: 'agle hafte', 'next week', 'ek hafte baad'
+    if re.search(r"\b(?:agle\s+hafte|next\s+week|ek\s+hafte\s+baad)\b", clean_text):
+        target = ref_date + datetime.timedelta(days=7)
+        return target.strftime("%Y-%m-%d")
+
+    # 9. Check for 'aaj' (today)
+    if re.search(r"\b(?:aaj|today|same\s+day)\b", clean_text):
         return ref_date.strftime("%Y-%m-%d")
 
     # 8. Check for explicit "N October"

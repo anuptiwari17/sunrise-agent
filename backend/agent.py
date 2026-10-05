@@ -176,6 +176,42 @@ class AgentRunner:
                 "metrics": {"turns": len(turns), "tokens": estimated_tokens, "latency_ms": elapsed_ms},
             }
 
+        # 4. LLM Semantic Safety & Triage (Catches complex/novel symptoms & flexible dates)
+        llm_triage = self.llm.semantic_triage(today, turns)
+        if llm_triage:
+            if llm_triage.get("is_clinical_urgent"):
+                self.tools.escalate_to_human(
+                    reason="clinical_urgent",
+                    context="Semantic LLM triage flagged acute medical symptoms.",
+                )
+                elapsed_ms = int((time.monotonic() - start_time) * 1000)
+                return {
+                    "conversation_id": conversation_id,
+                    "tool_calls": self.tools.get_tool_calls(),
+                    "terminal_state": "escalated",
+                    "escalation_reason": "clinical_urgent",
+                    "patient_id": None,
+                    "appointment_id": None,
+                    "reply": "Aapki takleef gambhir pratit hoti hai. Main turant ek doctor ya clinical staff ko call handoff kar raha hoon. Kripya nazdeeki emergency vibhag mein sampark karein.",
+                    "metrics": {"turns": len(turns), "tokens": estimated_tokens, "latency_ms": elapsed_ms},
+                }
+            if llm_triage.get("is_medical_advice"):
+                self.tools.escalate_to_human(
+                    reason="medical_advice",
+                    context="Semantic LLM triage flagged clinical advice inquiry.",
+                )
+                elapsed_ms = int((time.monotonic() - start_time) * 1000)
+                return {
+                    "conversation_id": conversation_id,
+                    "tool_calls": self.tools.get_tool_calls(),
+                    "terminal_state": "escalated",
+                    "escalation_reason": "medical_advice",
+                    "patient_id": None,
+                    "appointment_id": None,
+                    "reply": "Front desk par hum davai ya clinical salaah nahi de sakte. Main aapka prashna clinician ko forward kar raha hoon.",
+                    "metrics": {"turns": len(turns), "tokens": estimated_tokens, "latency_ms": elapsed_ms},
+                }
+
         # 4. Abandoned / Empty Call
         if check_abandoned_call(turns):
             elapsed_ms = int((time.monotonic() - start_time) * 1000)
@@ -251,6 +287,12 @@ class AgentRunner:
             t = resolve_clock_time(turn)
             if t:
                 target_time = t
+
+        # If regex couldn't resolve, but semantic LLM triage resolved them:
+        if not target_date and llm_triage and llm_triage.get("target_date"):
+            target_date = llm_triage.get("target_date")
+        if not target_time and llm_triage and llm_triage.get("target_time"):
+            target_time = llm_triage.get("target_time")
 
         # --- STEP 3: PATIENT RESOLUTION ---
         patient_record: Optional[Dict[str, Any]] = None

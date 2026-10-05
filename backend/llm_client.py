@@ -267,5 +267,59 @@ CRITICAL RULES:
 
             return tool_calls
         except Exception as e:
-            # Fall back safely
             return None
+
+    def semantic_triage(self, today: str, turns: List[str]) -> Optional[Dict[str, Any]]:
+        """Uses LLM to semantically detect any clinical emergency or extract nuanced relative dates."""
+        active = self.get_active_provider()
+        if active == "deterministic":
+            return None
+
+        prompt = f"""You are a clinical receptionist safety & triage system.
+Reference date today is strictly {today}.
+Review these caller utterances:
+{json.dumps(turns, ensure_ascii=False)}
+
+Respond ONLY with valid JSON:
+{{
+  "is_clinical_urgent": true or false (true if caller mentions any life-threatening, emergency, or acute medical symptom, e.g. breathing trouble, stroke signs, cyanosis, chest pain, blackout, regardless of phrasing),
+  "is_medical_advice": true or false (true if caller asks for medicine prescription, dosage or clinical diagnosis),
+  "target_date": "YYYY-MM-DD" or null (resolved relative to {today} for any phrasing like "agle din", "do din baad", etc.),
+  "target_time": "HH:MM" or null
+}}"""
+
+        try:
+            if active == "gemini" and self.gemini_key:
+                from google import genai
+                from google.genai import types
+
+                client = genai.Client(api_key=self.gemini_key)
+                res = client.models.generate_content(
+                    model=self.gemini_model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.0,
+                        response_mime_type="application/json",
+                    ),
+                )
+                if res.text:
+                    return json.loads(res.text)
+
+            elif active == "openai" and self.openai_key:
+                import openai
+
+                client = openai.OpenAI(api_key=self.openai_key)
+                res = client.chat.completions.create(
+                    model=self.openai_model,
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"},
+                    temperature=0.0,
+                )
+                content = res.choices[0].message.content
+                if content:
+                    return json.loads(content)
+        except Exception:
+            return None
+
+        return None
+
