@@ -2,7 +2,6 @@
 
 A safe, deterministic conversational agent with six tools over a synthetic clinic's schedule, paired with a React operator console for escalation triage and conversation auditing.
 
-Built for the **Swasthiq SDE Intern Screening Process** (September 2026).
 
 ---
 
